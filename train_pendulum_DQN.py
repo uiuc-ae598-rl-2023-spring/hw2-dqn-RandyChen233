@@ -46,10 +46,14 @@ class ReplayMemory(object):
     def __len__(self):
         return len(self.memory)
 
-def decay_eps(k ,num_episodes, eps_init, eps_end):
-    
+def decay_eps(k ,eps_init, eps_end, num_episodes):
+    # max_steps_done = 100
+
     # interpolated_eps = (eps_end - eps_init)*k/(num_episodes*100) + eps_init
-    interpolated_eps = max(eps_end, eps_init*0.98)
+    # interpolated_eps = max(eps_end, eps_init*0.98)
+
+    #Expoential decay:
+    interpolated_eps = eps_end + (eps_init - eps_end) * np.exp(-1. * k / 1000)
 
     return interpolated_eps
 
@@ -98,8 +102,8 @@ def update_weights(memory ,optimizer, policy_net, target_net, batch_size, GAMMA)
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
-    # Compute MSE loss
-    criterion = nn.MSELoss()
+    # Compute Huber loss
+    criterion = nn.SmoothL1Loss()
     loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
     # Optimize the model
@@ -108,52 +112,62 @@ def update_weights(memory ,optimizer, policy_net, target_net, batch_size, GAMMA)
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
+
+    return max(expected_state_action_values)
     
 
 def train_network(n_actions, num_episodes, policy_net, target_net, \
-                    optimizer, memory, env,  batch_size, eps_init, eps_end, GAMMA):
+                    optimizer, memory, env,  batch_size, eps_init, eps_end, GAMMA, target_update_frequency):
 
     reward_full = np.zeros(num_episodes)
-
+    actions = []
     count = 0
+    traj = []
 
-    for i_episode in range(num_episodes):
-   
+    
+    for episode in range(num_episodes):
+        
         s = env.reset()
         s = torch.tensor(s, dtype=torch.float32).unsqueeze(0)
-
+        
         done = False
         k = 0
-
+        state_values = []
         while not done:
-            eps = decay_eps(k ,num_episodes, eps_init, eps_end)
+            eps = decay_eps(k , eps_init, eps_end, num_episodes)
             a = action(s, eps, n_actions, policy_net)
+            
             s_next, reward, done = env.step(a.item())
+            
+            #Record an example trajectory:
+            if episode == num_episodes - 1:
+                traj.append(s_next)
+                actions.append(a)
+
             reward = torch.tensor([reward])
 
-            reward_full[i_episode] += GAMMA**(k)*reward 
+            reward_full[episode] += reward * GAMMA**k
+            # print(reward_full[episode])
+
             #append discounted reward to current EPISODE: each episode is associated with a single reward value
 
             k += 1
-
             s_next = torch.tensor(s_next, dtype=torch.float32).unsqueeze(0)
-
             memory.save(s, a, s_next, reward, done)
-
             # Move to the next state
             s = s_next
 
             # Update weights
-            update_weights(memory ,optimizer, policy_net, target_net, batch_size, GAMMA)
-
+            state_value = update_weights(memory ,optimizer, policy_net, target_net, batch_size, GAMMA)
+            state_values.append(state_value)
             count+=1
 
             #synchronize weights of target_net and policy_net every 100 steps 
-            if count%100 == 0:
+            if count % target_update_frequency == 0:
                 target_net.load_state_dict(policy_net.state_dict())
-                
 
-    return policy_net, reward_full
+
+    return policy_net, reward_full, actions, traj, state_values 
   
 
     
