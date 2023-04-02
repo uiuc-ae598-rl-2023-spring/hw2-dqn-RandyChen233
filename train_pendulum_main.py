@@ -30,13 +30,13 @@ def main():
 
     update_freq = 1000
 
-    policy_net, reward_Full ,actions, traj, state_values = train_network(n_actions, num_episodes, policy_net, target_net, \
+    policy_net, reward_Full_standard ,actions, traj, state_values = train_network(n_actions, num_episodes, policy_net, target_net, \
                                             optimizer, memory, env,  batch_size, eps_init, eps_end, GAMMA, \
                                             target_update_frequency = update_freq)
 
     """Plot a learning curve"""
     plt.figure(dpi=150)
-    plt.plot(reward_Full)
+    plt.plot(reward_Full_standard)
     plt.xlabel('Episode')
     plt.ylabel('Payoff')
     plt.grid()
@@ -50,7 +50,7 @@ def main():
     plt.ylabel('Theta_dot')
     plt.savefig('figures_trained/policy_trained.png')
 
-    """Plot example state trajectory within an episode"""
+    """Plot example state trajectory """
     plt.figure(dpi=150)
     traj = np.array(traj)
     plt.plot(traj[:, 0], label='theta')
@@ -67,11 +67,75 @@ def main():
     plt.ylabel('Theta_dot')
     plt.savefig('figures_trained/StateValues.png')
 
-
-
     """Save an animation"""
     policy = lambda s: (policy_net(torch.tensor(s, dtype=torch.float32).unsqueeze(0)).max(1)[1].view(1, 1)).item()
     env.video(policy, filename='figures_trained/trained_pendulum.gif')
+
+
+    """For ablation study:"""
+    #Scenario 2:
+    env = discreteaction_pendulum.Pendulum()
+    batch_size = 64
+    n_actions = env.num_actions
+    n_states = env.num_states
+    policy_net = DQN(n_states, n_actions)
+    target_net = DQN(n_states, n_actions)
+    target_net.load_state_dict(policy_net.state_dict()) #synchronize weights for initialization
+    # optimizer = optim.AdamW(policy_net.parameters(), lr = 1e-4, amsgrad=True)
+    optimizer = optim.RMSprop(policy_net.parameters(), lr=1e-4)
+    memory = ReplayMemory(int(1e6))
+    update_freq = 1
+    _, reward_Full_NoTarget ,_, _, _ = train_network(n_actions, num_episodes, policy_net, target_net, \
+                                            optimizer, memory, env,  batch_size, eps_init, eps_end, GAMMA, \
+                                            target_update_frequency = update_freq)
+    
+    #Scenario 3:
+    env = discreteaction_pendulum.Pendulum()
+    batch_size = 64
+    n_actions = env.num_actions
+    n_states = env.num_states
+    policy_net = DQN(n_states, n_actions)
+    target_net = DQN(n_states, n_actions)
+    target_net.load_state_dict(policy_net.state_dict()) #synchronize weights for initialization
+    # optimizer = optim.AdamW(policy_net.parameters(), lr = 1e-4, amsgrad=True)
+    optimizer = optim.RMSprop(policy_net.parameters(), lr=1e-4)
+    memory = ReplayMemory(int(batch_size))
+    update_freq = 1000
+    _, reward_Full_NoReplay ,_, _, _ = train_network(n_actions, num_episodes, policy_net, target_net, \
+                                            optimizer, memory, env,  batch_size, eps_init, eps_end, GAMMA, \
+                                            target_update_frequency = update_freq)
+    
+    #Scenario 4:
+    env = discreteaction_pendulum.Pendulum()
+    batch_size = 64
+    n_actions = env.num_actions
+    n_states = env.num_states
+    policy_net = DQN(n_states, n_actions)
+    target_net = DQN(n_states, n_actions)
+    target_net.load_state_dict(policy_net.state_dict()) #synchronize weights for initialization
+    # optimizer = optim.AdamW(policy_net.parameters(), lr = 1e-4, amsgrad=True)
+    optimizer = optim.RMSprop(policy_net.parameters(), lr=1e-4, alpha = 0.95)
+    memory = ReplayMemory(int(batch_size))
+    update_freq = 1
+    _, reward_Full_NoReplay_NoTarget ,_, _, _ = train_network(n_actions, num_episodes, policy_net, target_net, \
+                                            optimizer, memory, env,  batch_size, eps_init, eps_end, GAMMA, \
+                                            target_update_frequency = update_freq)
+    
+    plt.figure(dpi=150)
+    plt.plot(reward_Full_standard,label='Standard')
+    plt.plot(reward_Full_NoReplay, label='No Replay')
+    plt.plot(reward_Full_NoTarget, label='No Target')
+    plt.plot(reward_Full_NoReplay_NoTarget, label='No Replay No Target')
+    plt.ylabel('Payoff')
+    plt.xlabel('Time step')
+    plt.legend()
+    plt.title('Ablation study')
+    plt.savefig('figures_trained/LearningCurve_ablation.png')
+    print(f'Avg Q value for standard DQN is {np.mean(reward_Full_standard)}, \
+          avg Q value for no replay is {np.mean(reward_Full_NoReplay)},   \
+          avg Q value for no target is {np.mean(reward_Full_NoTarget)}, \
+          avg Q value for no replay no target is {np.mean(reward_Full_NoReplay_NoTarget)}')
+
 
 if __name__ == '__main__':
     main()

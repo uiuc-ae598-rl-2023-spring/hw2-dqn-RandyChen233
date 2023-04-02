@@ -3,7 +3,6 @@ import scipy.integrate
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-
 class Pendulum():
     def __init__(self, rg=None, num_actions=31):
         # Parameters that describe the physical system

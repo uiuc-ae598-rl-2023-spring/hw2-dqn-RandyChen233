@@ -47,13 +47,13 @@ class ReplayMemory(object):
         return len(self.memory)
 
 def decay_eps(k ,eps_init, eps_end, num_episodes):
-    # max_steps_done = 100
+    max_steps_done = 100
 
-    # interpolated_eps = (eps_end - eps_init)*k/(num_episodes*100) + eps_init
+    interpolated_eps = (eps_end - eps_init)*k/(num_episodes*max_steps_done) + eps_init
     # interpolated_eps = max(eps_end, eps_init*0.98)
 
     #Expoential decay:
-    interpolated_eps = eps_end + (eps_init - eps_end) * np.exp(-1. * k / 1000)
+    # interpolated_eps = eps_end + (eps_init - eps_end) * np.exp(-1. * k / 1000)
 
     return interpolated_eps
 
@@ -101,8 +101,9 @@ def update_weights(memory ,optimizer, policy_net, target_net, batch_size, GAMMA)
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0]
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
-
+    # print(f'expected Q value has shape {expected_state_action_values.shape}')
     # Compute Huber loss
+    #criterion = nn.MSELoss()
     criterion = nn.SmoothL1Loss()
     loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
@@ -139,10 +140,9 @@ def train_network(n_actions, num_episodes, policy_net, target_net, \
             
             s_next, reward, done = env.step(a.item())
             
-            #Record an example trajectory:
-            if episode == num_episodes - 1:
-                traj.append(s_next)
-                actions.append(a)
+            
+            traj.append(s_next)
+            actions.append(a)
 
             reward = torch.tensor([reward])
 
