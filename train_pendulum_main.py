@@ -13,7 +13,7 @@ def main():
     GAMMA = 0.95
     eps_init = 1.0
     eps_end = 0.1
-    num_episodes = 1000
+    num_episodes = 150
 
     env = discreteaction_pendulum.Pendulum()
     batch_size = 64
@@ -25,8 +25,8 @@ def main():
     target_net.load_state_dict(policy_net.state_dict()) #synchronize weights for initialization
 
     # optimizer = optim.AdamW(policy_net.parameters(), lr = 1e-4, amsgrad=True)
-    optimizer = optim.RMSprop(policy_net.parameters(), lr=1e-4)
-    memory = ReplayMemory(int(1e6))
+    optimizer = optim.RMSprop(policy_net.parameters(), lr=0.01)
+    memory = ReplayMemory(int(1e5))
 
     update_freq = 1000
 
