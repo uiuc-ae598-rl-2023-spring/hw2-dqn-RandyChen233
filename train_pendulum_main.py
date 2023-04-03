@@ -13,7 +13,7 @@ def main():
     GAMMA = 0.95
     eps_init = 1.0
     eps_end = 0.1
-    num_episodes = 100
+    num_episodes = 1000
 
     env = discreteaction_pendulum.Pendulum()
     batch_size = 64
@@ -43,12 +43,25 @@ def main():
     plt.savefig('figures_trained/LearningCurve.png')
 
     """Plot a trained policy"""
+    #We first need to discretize states
+    theta = np.linspace(-np.pi, np.pi, 50) #these are hard-coded bounds given by the environment
+    thetadot = np.linspace(-15, 15, 50)
+    actions = np.zeros([len(theta), len(thetadot)])
 
-    plt.figure(dpi=150)
-    sns.heatmap(traj,vmin=min(actions), vmax = max(actions), cbar_kws={'label': 'Tau'})
-    plt.xlabel('Theta')
-    plt.ylabel('Theta_dot')
-    plt.savefig('figures_trained/policy_trained.png')
+    for i in range(len(theta)): 
+        for j in range(len(thetadot)): 
+            s = torch.tensor([theta[i], thetadot[j]]).float()
+            a = torch.argmax(policy_net(s)).detach()
+            actions[i,j] = env._a_to_u(a)
+    
+    fig, ax = plt.subplots()
+    c = ax.contourf(theta, thetadot, actions, alpha = 0.9)
+    ax.set_xlabel(r'$\theta$')
+    ax.set_ylabel(r'$\dot{\theta}$')
+    ax.set_title('Trained Policy')
+    cbar = fig.colorbar(c)
+    cbar.ax.set_ylabel(r'$\tau$')
+    plt.savefig('figures_trained/TrainedPolicy.png')
 
     """Plot example state trajectory """
     plt.figure(dpi=150)
@@ -61,16 +74,26 @@ def main():
     plt.savefig('figures_trained/exampleTrajectory.png')
 
     """Plot state values"""
-    plt.figure(dpi=150)
-    sns.heatmap(traj,vmin=min(state_values), vmax = max(state_values), cbar_kws={'label': 'Value'})
-    plt.xlabel('Theta')
-    plt.ylabel('Theta_dot')
-    plt.savefig('figures_trained/StateValues.png')
+    values_array = np.zeros([len(theta), len(thetadot)])
+    
+    for i in range(len(theta)): 
+        for j in range(len(thetadot)): 
+                s = torch.tensor([theta[i], thetadot[j]]).float()
+                v = torch.max(policy_net(s)).detach()
+                values_array[i,j] = v
+    
+    fig2, ax2 = plt.subplots()
+    c = ax2.contourf(theta, thetadot, values_array, alpha = .9)
+    ax2.set_xlabel(r'$\theta$')
+    ax2.set_ylabel(r'$\dot{\theta}$')
+    ax2.set_title('State Values')
+    cbar = fig2.colorbar(c)
+    cbar.ax.set_ylabel('value')
+    fig2.savefig('figures_trained/StateValues.png')
 
     """Save an animation"""
     policy = lambda s: (policy_net(torch.tensor(s, dtype=torch.float32).unsqueeze(0)).max(1)[1].view(1, 1)).item()
     env.video(policy, filename='figures_trained/trained_pendulum.gif')
-
 
     """For ablation study:"""
     #Scenario 2:

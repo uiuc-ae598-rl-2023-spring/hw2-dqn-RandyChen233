@@ -103,8 +103,8 @@ def update_weights(memory ,optimizer, policy_net, target_net, batch_size, GAMMA)
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
     # print(f'expected Q value has shape {expected_state_action_values.shape}')
     # Compute Huber loss
-    #criterion = nn.MSELoss()
-    criterion = nn.SmoothL1Loss()
+    criterion = nn.MSELoss()
+    # criterion = nn.SmoothL1Loss()
     loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
     # Optimize the model
@@ -146,10 +146,10 @@ def train_network(n_actions, num_episodes, policy_net, target_net, \
 
             reward = torch.tensor([reward])
 
+            #append discounted reward to current EPISODE
             reward_full[episode] += reward * GAMMA**k
             # print(reward_full[episode])
 
-            #append discounted reward to current EPISODE: each episode is associated with a single reward value
 
             k += 1
             s_next = torch.tensor(s_next, dtype=torch.float32).unsqueeze(0)
