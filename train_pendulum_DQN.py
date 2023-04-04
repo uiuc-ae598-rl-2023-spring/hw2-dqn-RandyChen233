@@ -47,13 +47,13 @@ class ReplayMemory(object):
         return len(self.memory)
 
 def decay_eps(k ,eps_init, eps_end, num_episodes):
-    max_steps_done = 100
+    # max_steps_done = 100
 
-    interpolated_eps = (eps_end - eps_init)*k/(num_episodes*max_steps_done) + eps_init
+    # interpolated_eps = (eps_end - eps_init)*k/(num_episodes*max_steps_done) + eps_init
     # interpolated_eps = max(eps_end, eps_init*0.98)
 
     #Expoential decay:
-    # interpolated_eps = eps_end + (eps_init - eps_end) * np.exp(-1. * k / 1000)
+    interpolated_eps = eps_end + (eps_init - eps_end) * np.exp(-1. * k / 1000)
 
     return interpolated_eps
 
@@ -111,7 +111,7 @@ def update_weights(memory ,optimizer, policy_net, target_net, batch_size, GAMMA)
     optimizer.zero_grad()
     loss.backward()
     # In-place gradient clipping
-    torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
+    # torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
     return max(expected_state_action_values)

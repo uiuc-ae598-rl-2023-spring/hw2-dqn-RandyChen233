@@ -11,9 +11,9 @@ import seaborn as sns
 
 def main():
     GAMMA = 0.95
-    eps_init = 1.0
+    eps_init = 0.9
     eps_end = 0.1
-    num_episodes = 150
+    num_episodes = 500
 
     env = discreteaction_pendulum.Pendulum()
     batch_size = 64
@@ -25,8 +25,8 @@ def main():
     target_net.load_state_dict(policy_net.state_dict()) #synchronize weights for initialization
 
     # optimizer = optim.AdamW(policy_net.parameters(), lr = 1e-4, amsgrad=True)
-    optimizer = optim.RMSprop(policy_net.parameters(), lr=0.01)
-    memory = ReplayMemory(int(1e5))
+    optimizer = optim.RMSprop(policy_net.parameters(), lr=0.00025)
+    memory = ReplayMemory(int(5000))
 
     update_freq = 1000
 
@@ -106,7 +106,7 @@ def main():
     target_net.load_state_dict(policy_net.state_dict()) #synchronize weights for initialization
     # optimizer = optim.AdamW(policy_net.parameters(), lr = 1e-4, amsgrad=True)
     optimizer = optim.RMSprop(policy_net.parameters(), lr=1e-4)
-    memory = ReplayMemory(int(1e6))
+    memory = ReplayMemory(int(5000))
     update_freq = 1
     _, reward_Full_NoTarget ,_, _, _ = train_network(n_actions, num_episodes, policy_net, target_net, \
                                             optimizer, memory, env,  batch_size, eps_init, eps_end, GAMMA, \
